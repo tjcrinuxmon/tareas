@@ -963,9 +963,6 @@ app.delete('/api/convenios/:id', (req, res) => {
   res.json({ ok: true })
 })
 
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
-const __dirname = dirname(fileURLToPath(import.meta.url))
 app.use(express.static(join(__dirname, 'dist')))
 app.get('*', (req, res) => res.sendFile(join(__dirname, 'dist', 'index.html')))
 
