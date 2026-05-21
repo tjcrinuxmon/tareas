@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>INE · DAL — Control Laboral</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'ine-purple':      '#582E73','ine-purple-dark': '#3D1F52',
+            'ine-purple-xdark':'#2A1239','ine-purple-light':'#7040A0',
+            'ine-magenta':     '#E4007B','ine-magenta-dark':'#C4006A',
+            'ine-bg':          '#F8F5FB','ine-bg-hover':    '#F3EDF9',
+            'ine-border':      '#E2D9EE','ine-border-light':'#EDE8F4',
+            'ine-text':        '#1A1219','ine-muted':       '#6B5F78',
+            'ine-dim':         '#A090B0',
+          },
+          fontFamily: { sans: ['Roboto','system-ui','sans-serif'] },
+        }
+      }
+    }
+  </script>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Roboto',system-ui,sans-serif;font-size:14px;line-height:1.5}
+    input,select,textarea,button{font-family:inherit}
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:#EDE8F4}
+    ::-webkit-scrollbar-thumb{background:#C4A8DC;border-radius:3px}
+    ::-webkit-scrollbar-thumb:hover{background:#9B7BB8}
+    .tbl-wrap::-webkit-scrollbar{height:10px}
+    .tbl-wrap::-webkit-scrollbar-thumb{background:#9B7BB8;border-radius:5px}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+    .fade-in{animation:fadeIn .18s ease-out}
+    .btn-mg{background:#D5007F;color:#fff;padding:9px 20px;border-radius:6px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(213,0,127,.30);transition:background .18s,box-shadow .18s,transform .18s}
+    .btn-mg:hover{background:#B5006B;transform:translateY(-1px);box-shadow:0 4px 14px rgba(213,0,127,.40)}
+    .btn-mg:active{background:#8F0054;transform:translateY(0)}
+    .btn-mg:disabled{opacity:.45;transform:none;cursor:not-allowed;box-shadow:none}
+    .btn-outline{background:#fff;color:#D5007F;border:1.5px solid #D5007F;padding:8px 19px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+    .btn-outline:hover{background:rgba(213,0,127,.06)}
+    .btn-ghost{background:transparent;color:#6B5F78;border:none;padding:5px 10px;border-radius:5px;font-size:13px;cursor:pointer;transition:all .15s}
+    .btn-ghost:hover{background:#F3EDF9;color:#582E73}
+    .ine-card{background:#fff;border:1.5px solid #E2D9EE;border-radius:10px;box-shadow:0 2px 8px rgba(88,46,115,.07)}
+    .ine-input{background:#fff;border:1.5px solid #E2D9EE;border-radius:6px;font-size:14px;padding:9px 13px;width:100%;font-family:inherit;color:#1A1219;transition:border-color .15s,box-shadow .15s;outline:none}
+    .ine-input:focus{border-color:#582E73;box-shadow:0 0 0 3px rgba(88,46,115,.13)}
+    .ine-input::placeholder{color:#A090B0}
+    .ine-label{font-size:12px;font-weight:700;color:#575453;display:block;margin-bottom:5px}
+    .ine-req{color:#B91C1C;margin-left:2px}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;color:#C4A8DC;transition:all .15s;white-space:nowrap}
+    .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+    .nav-item.active{background:rgba(255,255,255,.15);color:#fff;font-weight:700}
+    .nav-group{font-size:10px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase;padding:14px 14px 4px;margin-top:2px}
+    th{position:sticky;top:0;z-index:1}
+  </style>
+</head>
+<body class="bg-ine-bg text-ine-text">
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel" data-presets="react">
+const { useState, useCallback, useMemo } = React;
+
+/* ─── CONSTANTS ─────────────────────────────────────────────────────────── */
+const ABOGADOS = ['','JC','Luis Carlos','Eduardo','Edgar','Jessica','Guadalupe',
+  'Alejandra','Anay','Laura','Luisa','Christian','Aníbal','Absalón','Jorge','Zeferino'];
+const ANOS = ['','2022','2023','2024','2025','2026'];
+const ROLES = [{key:'capturista',label:'Capturista'},{key:'ejecutiva',label:'Ejecutiva'},{key:'admin',label:'Admin'}];
+
+/* ─── UTILITIES ─────────────────────────────────────────────────────────── */
+const genId = () => Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+const fmtDate = d => { if(!d) return '—'; const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`; };
+const addDays = (ds,n) => { if(!ds||!n) return ''; const d=new Date(ds+'T00:00:00'); d.setDate(d.getDate()+Number(n)); return d.toISOString().slice(0,10); };
+const daysUntil = ds => { if(!ds) return null; const t=new Date(); t.setHours(0,0,0,0); return Math.round((new Date(ds+'T00:00:00')-t)/86400000); };
+
+/* ─── HOOKS ─────────────────────────────────────────────────────────────── */
+function useLS(key, init) {
+  const [val,setVal] = useState(()=>{ try{const s=localStorage.getItem(key);return s?JSON.parse(s):init;}catch{return init;} });
+  const set = useCallback(v=>{ setVal(prev=>{ const next=typeof v==='function'?v(prev):v; try{localStorage.setItem(key,JSON.stringify(next));}catch{} return next; }); },[key]);
+  return [val,set];
+}
+function useStore() {
+  const [actores,setActores]           = useLS('dal_actores',[]);
+  const [emplaz,setEmplaz]             = useLS('dal_emplaz',[]);
+  const [noemplaz,setNoemplaz]         = useLS('dal_noemplaz',[]);
+  const [sentencias,setSentencias]     = useLS('dal_sentencias',[]);
+  const [requerims,setRequerims]       = useLS('dal_requerims',[]);
+  const [cumplims,setCumplims]         = useLS('dal_cumplims',[]);
+  const [incidentes,setIncidentes]     = useLS('dal_incidentes',[]);
+  const [amparos,setAmparos]           = useLS('dal_amparos',[]);
+  const [conciliacion,setConciliacion] = useLS('dal_conciliacion',[]);
+  const [oic,setOic]                   = useLS('dal_oic',[]);
+  const [reencauz,setReencauz]         = useLS('dal_reencauz',[]);
+  return {actores,setActores,emplaz,setEmplaz,noemplaz,setNoemplaz,sentencias,setSentencias,
+    requerims,setRequerims,cumplims,setCumplims,incidentes,setIncidentes,amparos,setAmparos,
+    conciliacion,setConciliacion,oic,setOic,reencauz,setReencauz};
+}
+
+/* ─── SHARED UI ─────────────────────────────────────────────────────────── */
+function VBadge({ds}) {
+  if(!ds) return <span className="text-ine-dim text-xs">—</span>;
+  const d=daysUntil(ds);
+  const cls=d<0?'bg-red-100 text-red-700 border border-red-200':d<=3?'bg-amber-100 text-amber-700 border border-amber-200':d<=10?'bg-yellow-50 text-yellow-700 border border-yellow-200':'bg-green-50 text-green-700 border border-green-200';
+  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{fmtDate(ds)}<span className="opacity-70">{d<0?`+${Math.abs(d)}d`:`${d}d`}</span></span>;
+}
+
+function FieldInput({schema,value,onChange}) {
+  const {label,type,options,required,rows}=schema;
+  if(type==='checkbox') return (
+    <label className="flex items-center gap-2 cursor-pointer pt-5">
+      <input type="checkbox" checked={!!value} onChange={e=>onChange(e.target.checked)} className="w-4 h-4 rounded" style={{accentColor:'#582E73'}}/>
+      <span className="text-sm">{label}</span>
+    </label>
+  );
+  if(type==='select') return (
+    <div>
+      <label className="ine-label">{label}{required&&<span className="ine-req">*</span>}</label>
+      <select className="ine-input" value={value??''} onChange={e=>onChange(e.target.value)}>
+        {(options||[]).map(o=><option key={o} value={o}>{o||'— Seleccionar —'}</option>)}
+      </select>
+    </div>
+  );
+  if(type==='textarea') return (
+    <div>
+      <label className="ine-label">{label}</label>
+      <textarea className="ine-input" rows={rows||3} value={value||''} onChange={e=>onChange(e.target.value)}/>
+    </div>
+  );
+  return (
+    <div>
+      <label className="ine-label">{label}{required&&<span className="ine-req">*</span>}</label>
+      <input type={type||'text'} className="ine-input" value={value??''} onChange={e=>onChange(e.target.value)}/>
+    </div>
+  );
+}
+
+function Modal({title,onClose,children}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 px-4" style={{background:'rgba(42,18,57,.55)'}}>
+      <div className="ine-card w-full max-w-2xl max-h-[88vh] flex flex-col fade-in" style={{boxShadow:'0 20px 60px rgba(88,46,115,.28)'}}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-ine-border flex-shrink-0">
+          <h2 className="font-bold text-base text-ine-purple">{title}</h2>
+          <button className="btn-ghost text-xl leading-none px-2 py-0" onClick={onClose}>×</button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDelete({onConfirm,onCancel}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{background:'rgba(42,18,57,.55)'}}>
+      <div className="ine-card p-6 max-w-sm w-full fade-in text-center">
+        <div className="text-3xl mb-3">⚠️</div>
+        <p className="font-semibold text-ine-text mb-1">¿Eliminar registro?</p>
+        <p className="text-ine-muted text-sm mb-5">Esta acción no se puede deshacer.</p>
+        <div className="flex gap-3 justify-center">
+          <button className="btn-outline" onClick={onCancel}>Cancelar</button>
+          <button className="btn-mg" style={{background:'#DC2626',boxShadow:'none'}} onClick={onConfirm}>Eliminar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecordForm({title,schemas,initial,onSave,onClose}) {
+  const [form,setForm] = useState(()=>{
+    const d={};
+    schemas.forEach(s=>{d[s.key]=initial?.[s.key]??(s.type==='checkbox'?false:'');});
+    return d;
+  });
+  const set=(key,val)=>setForm(f=>{
+    const n={...f,[key]:val};
+    if((key==='plazo'||key==='fechaNotificacion')&&n.plazo&&n.fechaNotificacion)
+      n.fechaVencimiento=addDays(n.fechaNotificacion,n.plazo);
+    return n;
+  });
+  const handleSave=()=>{
+    const miss=schemas.filter(s=>s.required&&!form[s.key]);
+    if(miss.length){alert('Campos requeridos: '+miss.map(s=>s.label).join(', '));return;}
+    onSave(form);
+  };
+  return (
+    <Modal title={title} onClose={onClose}>
+      <div className="grid grid-cols-2 gap-4">
+        {schemas.filter(s=>!s.tableOnly).map(s=>(
+          <div key={s.key} className={s.wide?'col-span-2':''}>
+            <FieldInput schema={s} value={form[s.key]} onChange={v=>set(s.key,v)}/>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-3 justify-end mt-6 pt-5 border-t border-ine-border">
+        <button className="btn-outline" onClick={onClose}>Cancelar</button>
+        <button className="btn-mg" onClick={handleSave}>{initial?'Guardar cambios':'Agregar registro'}</button>
+      </div>
+    </Modal>
+  );
+}
+
+function DataTable({schemas,rows,onEdit,onDelete,role}) {
+  const cols=schemas.filter(s=>!s.formOnly);
+  return (
+    <div className="tbl-wrap overflow-x-auto">
+      <table className="w-full text-sm" style={{borderCollapse:'separate',borderSpacing:0}}>
+        <thead>
+          <tr>
+            {cols.map(c=>(
+              <th key={c.key} className="px-3 py-2.5 text-left text-xs text-ine-muted bg-ine-bg border-b border-ine-border whitespace-nowrap" style={{fontWeight:700}}>{c.label}</th>
+            ))}
+            <th className="px-3 py-2.5 bg-ine-bg border-b border-ine-border w-20"/>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length===0&&<tr><td colSpan={cols.length+1} className="px-3 py-10 text-center text-ine-dim">Sin registros. Usa «Nuevo registro» para agregar.</td></tr>}
+          {rows.map((row,i)=>(
+            <tr key={row.id||i} className="border-b border-ine-border-light hover:bg-ine-bg-hover transition-colors">
+              {cols.map(c=>(
+                <td key={c.key} className="px-3 py-2.5 whitespace-nowrap max-w-xs truncate">
+                  {c.isVenc?<VBadge ds={row[c.key]}/>:
+                   c.type==='checkbox'?(row[c.key]?<span className="text-green-600 font-bold">✓</span>:<span className="text-ine-dim">—</span>):
+                   c.type==='date'?fmtDate(row[c.key]):
+                   <span className={c.key==='expediente'?'font-semibold text-ine-purple':''}>{row[c.key]||'—'}</span>}
+                </td>
+              ))}
+              <td className="px-3 py-2.5">
+                <div className="flex gap-1">
+                  <button className="btn-ghost text-xs px-2 py-1" onClick={()=>onEdit(row)} title="Editar">✏️</button>
+                  {role==='admin'&&<button className="btn-ghost text-xs px-2 py-1 hover:text-red-600" onClick={()=>onDelete(row)} title="Eliminar">🗑</button>}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SectionView({title,schemas,records,setRecords,role}) {
+  const [showForm,setShowForm] = useState(false);
+  const [editing,setEditing]   = useState(null);
+  const [deleting,setDeleting] = useState(null);
+  const [search,setSearch]     = useState('');
+  const filtered = useMemo(()=>{
+    if(!search.trim()) return records;
+    const q=search.toLowerCase();
+    return records.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(q)));
+  },[records,search]);
+  const handleSave=form=>{
+    if(editing) setRecords(rs=>rs.map(r=>r.id===editing.id?{...form,id:r.id}:r));
+    else setRecords(rs=>[...rs,{...form,id:genId()}]);
+    setShowForm(false); setEditing(null);
+  };
+  const handleDelete=()=>{ setRecords(rs=>rs.filter(r=>r.id!==deleting.id)); setDeleting(null); };
+  return (
+    <div className="fade-in">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-xl font-bold text-ine-purple">{title}</h1>
+          <p className="text-ine-muted text-sm mt-0.5">{records.length} registro{records.length!==1?'s':''}</p>
+        </div>
+        {(role==='capturista'||role==='admin')&&(
+          <button className="btn-mg" onClick={()=>{setEditing(null);setShowForm(true);}}>+ Nuevo registro</button>
+        )}
+      </div>
+      <div className="ine-card">
+        <div className="px-4 py-3 border-b border-ine-border">
+          <input className="ine-input" style={{maxWidth:300}} placeholder="Buscar en todos los campos…" value={search} onChange={e=>setSearch(e.target.value)}/>
+        </div>
+        <DataTable schemas={schemas} rows={filtered} onEdit={r=>{setEditing(r);setShowForm(true);}} onDelete={r=>setDeleting(r)} role={role}/>
+      </div>
+      {showForm&&<RecordForm title={editing?`Editar — ${title}`:`Nuevo — ${title}`} schemas={schemas} initial={editing} onSave={handleSave} onClose={()=>{setShowForm(false);setEditing(null);}}/>}
+      {deleting&&<ConfirmDelete onConfirm={handleDelete} onCancel={()=>setDeleting(null)}/>}
+    </div>
+  );
+}
+
+/* ─── SECTION SCHEMAS ───────────────────────────────────────────────────── */
+const S_ACTORES=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'actor',label:'Actor',required:true},
+  {key:'ano',label:'Año',type:'select',options:ANOS},
+  {key:'observaciones',label:'Observaciones',type:'textarea',wide:true},
+];
+const S_EMPLAZ=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'fechaEmplaz',label:'Fecha Emplazamiento',type:'date'},
+  {key:'abogado',label:'Abogado',type:'select',options:ABOGADOS},
+  {key:'entregaFicha',label:'Entrega Ficha',type:'checkbox'},
+  {key:'revision',label:'Revisión',type:'checkbox'},
+  {key:'vencimiento',label:'Vencimiento',type:'date',isVenc:true},
+  {key:'entregaTribunal',label:'Entrega Tribunal',type:'date'},
+  {key:'medioEntrega',label:'Medio Entrega',type:'select',options:['','Física','Paquetería DHL','Auxilio Jurisdiccional']},
+  {key:'actoImpugnado',label:'Acto Impugnado',wide:true},
+];
+const S_NOEMPLAZ=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'sentido',label:'Sentido'},
+  {key:'actor',label:'Actor'},
+  {key:'estatus',label:'Estatus',type:'select',options:['','EMPLAZADO','EMPLAZAMIENTO PENDIENTE','SE DESECHA']},
+  {key:'observaciones',label:'OBS / Notas',type:'textarea',wide:true},
+];
+const S_SENTENCIAS=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'fechaNotificacion',label:'Fecha Notificación',type:'date'},
+  {key:'plazo',label:'Plazo (días)',type:'number'},
+  {key:'fechaVencimiento',label:'Fecha Vencimiento',type:'date',isVenc:true},
+  {key:'abogado',label:'Abogado',type:'select',options:ABOGADOS},
+  {key:'fechaEntregaTEPJF',label:'Entrega TEPJF',type:'date'},
+];
+const S_REQUERIMS=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'fechaNotificacion',label:'Fecha Notificación',type:'date'},
+  {key:'plazo',label:'Plazo (días)',type:'number'},
+  {key:'fechaVencimiento',label:'Fecha Vencimiento',type:'date',isVenc:true},
+  {key:'abogado',label:'Abogado',type:'select',options:ABOGADOS},
+  {key:'fechaEntregaTEPJF',label:'Entrega TEPJF',type:'date'},
+  {key:'observaciones',label:'Observaciones',type:'textarea',wide:true},
+];
+const S_CUMPLIMS=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'actor',label:'Actor'},
+  {key:'sentencia',label:'Fecha Sentencia',type:'date'},
+  {key:'condena',label:'Condena'},
+  {key:'prestacionesPagadas',label:'Prestaciones Pagadas',type:'textarea',wide:true},
+  {key:'prestacionesPorCumplir',label:'Prestaciones por Cumplir',type:'textarea',wide:true},
+  {key:'abogado',label:'Abogado',type:'select',options:ABOGADOS},
+  {key:'returno',label:'Returno'},
+  {key:'notificaciones',label:'Notificaciones',type:'textarea',wide:true},
+  {key:'fechaEntrega',label:'Fecha de Entrega',type:'date'},
+  {key:'estatus',label:'Estatus',type:'select',options:['','PRESENTADA','FORMALMENTE CONCLUIDO']},
+];
+const S_INCIDENTES=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'fechaNotificacion',label:'Fecha Notificación',type:'date'},
+  {key:'plazo',label:'Plazo (días)',type:'number'},
+  {key:'fechaVencimiento',label:'Fecha Vencimiento',type:'date',isVenc:true},
+  {key:'abogado',label:'Abogado',type:'select',options:ABOGADOS},
+];
+const S_AMPAROS=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'fechaNotificacion',label:'Fecha Notificación',type:'date'},
+  {key:'actor',label:'Actor'},
+  {key:'plazo',label:'Plazo (días)',type:'number'},
+  {key:'fechaVencimiento',label:'Fecha Vencimiento',type:'date',isVenc:true},
+  {key:'abogado',label:'Abogado',type:'select',options:ABOGADOS},
+  {key:'tribunal',label:'Tribunal'},
+  {key:'fechaCumplimiento',label:'Fecha Cumplimiento',type:'date'},
+];
+const S_CONCILIACION=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'actor',label:'Actor'},
+  {key:'fechaNotificacion',label:'Fecha Notificación',type:'date'},
+  {key:'fechaAudiencia',label:'Fecha Audiencia',type:'date',isVenc:true},
+  {key:'ubicacion',label:'Ubicación Audiencia'},
+  {key:'abogado',label:'Abogado',type:'select',options:ABOGADOS},
+];
+const S_OIC=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'fechaNotificacion',label:'Fecha Notificación',type:'date'},
+  {key:'numeroOficio',label:'Número de Oficio'},
+  {key:'responsable',label:'Responsable'},
+];
+const S_REENCAUZ=[
+  {key:'expediente',label:'Expediente',required:true},
+  {key:'fechaNotificacion',label:'Fecha Notificación',type:'date'},
+  {key:'actor',label:'Actor'},
+  {key:'abogado',label:'Abogado',type:'select',options:ABOGADOS},
+  {key:'notas',label:'Notas',type:'textarea',wide:true},
+];
+
+/* ─── DASHBOARD ─────────────────────────────────────────────────────────── */
+function KpiCard({label,value,sub,color}) {
+  return (
+    <div className="ine-card p-5">
+      <p className="text-xs text-ine-muted uppercase tracking-wide mb-1" style={{fontWeight:700}}>{label}</p>
+      <p className="text-3xl mb-0.5" style={{color,fontWeight:900}}>{value}</p>
+      {sub&&<p className="text-xs text-ine-dim">{sub}</p>}
+    </div>
+  );
+}
+
+function Dashboard({store}) {
+  const {actores,emplaz,sentencias,requerims,cumplims,incidentes,amparos,conciliacion,oic,reencauz,noemplaz}=store;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const isUrgent=ds=>{ if(!ds)return false; const d=daysUntil(ds); return d>=0&&d<=7; };
+  const isVencido=ds=>{ if(!ds)return false; return new Date(ds+'T00:00:00')<today; };
+  const vencidos=[
+    ...sentencias.filter(r=>isVencido(r.fechaVencimiento)&&!r.fechaEntregaTEPJF),
+    ...requerims.filter(r=>isVencido(r.fechaVencimiento)&&!r.fechaEntregaTEPJF),
+    ...incidentes.filter(r=>isVencido(r.fechaVencimiento)),
+    ...amparos.filter(r=>isVencido(r.fechaVencimiento)&&!r.fechaCumplimiento),
+  ];
+  const urgentes=[
+    ...sentencias.filter(r=>isUrgent(r.fechaVencimiento)&&!r.fechaEntregaTEPJF),
+    ...requerims.filter(r=>isUrgent(r.fechaVencimiento)&&!r.fechaEntregaTEPJF),
+    ...incidentes.filter(r=>isUrgent(r.fechaVencimiento)),
+    ...amparos.filter(r=>isUrgent(r.fechaVencimiento)&&!r.fechaCumplimiento),
+  ];
+  const byAbogado={};
+  [...sentencias,...requerims,...incidentes,...amparos,...emplaz,...conciliacion].forEach(r=>{
+    if(r.abogado) byAbogado[r.abogado]=(byAbogado[r.abogado]||0)+1;
+  });
+  const abRows=Object.entries(byAbogado).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxAb=abRows.length?Math.max(...abRows.map(r=>r[1])):1;
+  return (
+    <div className="fade-in space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-ine-purple">Dashboard — DAL</h1>
+        <p className="text-ine-muted text-sm mt-0.5">Dirección de Asuntos Laborales · INE DEAJ</p>
+      </div>
+      {vencidos.length>0&&(
+        <div className="ine-card p-4 border-l-4 border-red-500 bg-red-50">
+          <p className="text-red-700 text-sm" style={{fontWeight:700}}>⚠ {vencidos.length} plazo{vencidos.length!==1?'s':''} vencido{vencidos.length!==1?'s':''} sin entrega registrada</p>
+          <p className="text-red-600 text-xs mt-0.5">Revisar sentencias, requerimientos, incidentes y amparos.</p>
+        </div>
+      )}
+      {urgentes.length>0&&(
+        <div className="ine-card p-4 border-l-4 border-amber-400 bg-amber-50">
+          <p className="text-amber-700 text-sm" style={{fontWeight:700}}>🔔 {urgentes.length} vencimiento{urgentes.length!==1?'s':''} en los próximos 7 días</p>
+        </div>
+      )}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <KpiCard label="Actores / Expedientes" value={actores.length} color="#582E73"/>
+        <KpiCard label="Emplazamientos" value={emplaz.length} color="#3B82F6"/>
+        <KpiCard label="Sentencias" value={sentencias.length} color="#10B981"/>
+        <KpiCard label="Requerimientos" value={requerims.length} color="#F59E0B"/>
+        <KpiCard label="Cumplimientos" value={cumplims.length} sub={`${cumplims.filter(r=>r.estatus==='FORMALMENTE CONCLUIDO').length} concluidos`} color="#8B5CF6"/>
+        <KpiCard label="Incidentes" value={incidentes.length} color="#EF4444"/>
+        <KpiCard label="Amparos" value={amparos.length} color="#14B8A6"/>
+        <KpiCard label="Conciliación" value={conciliacion.length} color="#E4007B"/>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="ine-card p-5">
+          <h3 className="text-sm text-ine-purple mb-4" style={{fontWeight:700}}>Carga por Abogado</h3>
+          {abRows.length===0&&<p className="text-ine-dim text-sm">Sin datos</p>}
+          <div className="space-y-2.5">
+            {abRows.map(([ab,n])=>(
+              <div key={ab} className="flex items-center gap-3">
+                <span className="text-xs text-ine-muted w-24 truncate">{ab}</span>
+                <div className="flex-1 bg-ine-bg rounded-full h-2 overflow-hidden">
+                  <div className="h-2 rounded-full" style={{width:`${(n/maxAb)*100}%`,background:'#582E73'}}/>
+                </div>
+                <span className="text-xs text-ine-purple w-5 text-right" style={{fontWeight:700}}>{n}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="ine-card p-5">
+          <h3 className="text-sm text-ine-purple mb-4" style={{fontWeight:700}}>Cumplimientos por Estatus</h3>
+          {[{l:'Presentada',k:'PRESENTADA',c:'#F59E0B'},{l:'Formalmente Concluido',k:'FORMALMENTE CONCLUIDO',c:'#10B981'},{l:'Sin estatus',k:'',c:'#A090B0'}].map(({l,k,c})=>(
+            <div key={l} className="flex items-center justify-between py-1.5 border-b border-ine-border-light last:border-0">
+              <span className="text-sm">{l}</span>
+              <span className="text-sm" style={{fontWeight:700,color:c}}>{cumplims.filter(r=>r.estatus===k).length}</span>
+            </div>
+          ))}
+        </div>
+        <div className="ine-card p-5">
+          <h3 className="text-sm text-ine-purple mb-4" style={{fontWeight:700}}>No-Emplazamientos por Estatus</h3>
+          {['EMPLAZADO','EMPLAZAMIENTO PENDIENTE','SE DESECHA'].map(k=>(
+            <div key={k} className="flex items-center justify-between py-1.5 border-b border-ine-border-light last:border-0">
+              <span className="text-sm">{k}</span>
+              <span className="text-sm font-semibold text-ine-purple">{noemplaz.filter(r=>r.estatus===k).length}</span>
+            </div>
+          ))}
+        </div>
+        <div className="ine-card p-5">
+          <h3 className="text-sm text-ine-purple mb-4" style={{fontWeight:700}}>Otros módulos</h3>
+          {[{l:'OIC',v:oic.length,c:'#8B5CF6'},{l:'Reencauzamiento',v:reencauz.length,c:'#14B8A6'},{l:'No-Emplazamientos',v:noemplaz.length,c:'#EF4444'}].map(({l,v,c})=>(
+            <div key={l} className="flex items-center justify-between py-1.5 border-b border-ine-border-light last:border-0">
+              <span className="text-sm">{l}</span>
+              <span className="text-sm" style={{fontWeight:700,color:c}}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── NAV CONFIG ────────────────────────────────────────────────────────── */
+const NAV=[
+  {key:'dashboard',   label:'Dashboard',        icon:'⊞', group:'g'},
+  {key:'actores',     label:'Actores',           icon:'👤',group:'s'},
+  {key:'emplaz',      label:'Emplazamientos',    icon:'📋',group:'s'},
+  {key:'noemplaz',    label:'No Emplazamientos', icon:'⛔',group:'s'},
+  {key:'sentencias',  label:'Sentencias',        icon:'⚖️', group:'s'},
+  {key:'requerims',   label:'Requerimientos',    icon:'📌',group:'s'},
+  {key:'cumplims',    label:'Cumplimientos',     icon:'✅',group:'s'},
+  {key:'incidentes',  label:'Incidentes',        icon:'⚡',group:'s'},
+  {key:'amparos',     label:'Amparos',           icon:'🛡',group:'s'},
+  {key:'conciliacion',label:'Conciliación',      icon:'🤝',group:'s'},
+  {key:'oic',         label:'OIC',               icon:'🔍',group:'s'},
+  {key:'reencauz',    label:'Reencauzamiento',   icon:'↩️', group:'s'},
+];
+
+/* ─── LAYOUT ─────────────────────────────────────────────────────────────── */
+function Header({role,setRole}) {
+  return (
+    <header className="flex items-center px-5 h-14 flex-shrink-0" style={{background:'#2A1239',borderBottom:'1px solid rgba(255,255,255,.07)'}}>
+      <div className="flex items-center gap-2.5 mr-auto">
+        <div style={{width:30,height:30,borderRadius:5,background:'#D5007F',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:900,color:'#fff',letterSpacing:.5}}>DAL</div>
+        <div>
+          <p className="text-white text-xs leading-tight" style={{fontWeight:700}}>INE · DEAJ</p>
+          <p className="text-xs leading-tight" style={{color:'rgba(255,255,255,.45)'}}>Dirección de Asuntos Laborales</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs" style={{color:'rgba(255,255,255,.4)'}}>Vista:</span>
+        <select value={role} onChange={e=>setRole(e.target.value)}
+          className="text-xs rounded px-2.5 py-1.5 outline-none" style={{background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.18)',color:'#fff',fontWeight:600,cursor:'pointer'}}>
+          {ROLES.map(r=><option key={r.key} value={r.key} style={{background:'#2A1239'}}>{r.label}</option>)}
+        </select>
+      </div>
+    </header>
+  );
+}
+
+function Sidebar({active,setActive}) {
+  return (
+    <nav className="w-52 flex-shrink-0 overflow-y-auto py-2" style={{background:'#3D1F52',borderRight:'1px solid rgba(255,255,255,.05)'}}>
+      {NAV.filter(n=>n.group==='g').map(n=>(
+        <div key={n.key} className={`nav-item ${active===n.key?'active':''}`} onClick={()=>setActive(n.key)}>
+          <span style={{fontSize:16}}>{n.icon}</span><span>{n.label}</span>
+        </div>
+      ))}
+      <p className="nav-group">Secciones</p>
+      {NAV.filter(n=>n.group==='s').map(n=>(
+        <div key={n.key} className={`nav-item ${active===n.key?'active':''}`} onClick={()=>setActive(n.key)}>
+          <span style={{fontSize:14}}>{n.icon}</span><span>{n.label}</span>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+/* ─── APP ────────────────────────────────────────────────────────────────── */
+function App() {
+  const [role,setRole] = useLS('dal_role','capturista');
+  const [active,setActive] = useState('dashboard');
+  const store = useStore();
+  const sec=(title,schemas,records,setRecords)=>(
+    <SectionView title={title} schemas={schemas} records={records} setRecords={setRecords} role={role}/>
+  );
+  const views={
+    dashboard:    <Dashboard store={store}/>,
+    actores:      sec('Actores',           S_ACTORES,    store.actores,    store.setActores),
+    emplaz:       sec('Emplazamientos',    S_EMPLAZ,     store.emplaz,     store.setEmplaz),
+    noemplaz:     sec('No-Emplazamientos', S_NOEMPLAZ,   store.noemplaz,   store.setNoemplaz),
+    sentencias:   sec('Sentencias',        S_SENTENCIAS, store.sentencias, store.setSentencias),
+    requerims:    sec('Requerimientos',    S_REQUERIMS,  store.requerims,  store.setRequerims),
+    cumplims:     sec('Cumplimientos',     S_CUMPLIMS,   store.cumplims,   store.setCumplims),
+    incidentes:   sec('Incidentes',        S_INCIDENTES, store.incidentes, store.setIncidentes),
+    amparos:      sec('Amparos',           S_AMPAROS,    store.amparos,    store.setAmparos),
+    conciliacion: sec('Conciliación',      S_CONCILIACION,store.conciliacion,store.setConciliacion),
+    oic:          sec('OIC',               S_OIC,        store.oic,        store.setOic),
+    reencauz:     sec('Reencauzamiento',   S_REENCAUZ,   store.reencauz,   store.setReencauz),
+  };
+  return (
+    <div style={{height:'100vh',display:'flex',flexDirection:'column'}}>
+      <Header role={role} setRole={setRole}/>
+      <div style={{display:'flex',flex:1,overflow:'hidden'}}>
+        <Sidebar active={active} setActive={setActive}/>
+        <main style={{flex:1,overflowY:'auto',padding:'24px 28px'}}>
+          {views[active]}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
