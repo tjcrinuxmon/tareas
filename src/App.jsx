@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import BrandLogo from './components/BrandLogo.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import TaskList from './components/TaskList.jsx'
@@ -26,6 +26,26 @@ const ROLE_LABELS = {
 export default function App() {
   const [token, setToken] = useState(() => getToken())
   const [user, setUser] = useState(() => getUser())
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const ssoToken = params.get('sso_token')
+    if (!ssoToken || token) return
+    fetch('/api/auth/sso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sso_token: ssoToken }),
+    })
+      .then(r => r.json())
+      .then(({ token: t, user: u }) => {
+        if (!t) return
+        setAuth(t, u)
+        setToken(t)
+        setUser(u)
+        window.history.replaceState({}, '', '/')
+      })
+      .catch(() => {})
+  }, [])
 
   const [view, setView] = useState('tasks')
   const [selectedTaskId, setSelectedTaskId] = useState(null)
@@ -189,6 +209,14 @@ export default function App() {
                 {ROLE_LABELS[user.role] || 'Usuario'}
               </p>
             </div>
+            <a href="http://localhost:5174" title="Volver al portal"
+              className="p-1.5 rounded-lg text-ine-dim hover:text-ine-purple hover:bg-ine-bg transition-colors flex items-center gap-1 text-xs font-semibold"
+              style={{ textDecoration:'none' }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span className="hidden sm:inline">Portal</span>
+            </a>
             <button
               onClick={handleLogout}
               title="Cerrar sesión"

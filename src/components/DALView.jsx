@@ -549,20 +549,98 @@ function Dashboard({ store }) {
   )
 }
 
+/* ─── SVG ICONS ─────────────────────────────────────────────────────────── */
+const ICONS = {
+  dashboard: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+    </svg>
+  ),
+  actores: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  ),
+  emplaz: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+      <rect x="9" y="3" width="6" height="4" rx="1"/>
+      <path d="M9 12l2 2 4-4"/>
+    </svg>
+  ),
+  noemplaz: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+      <rect x="9" y="3" width="6" height="4" rx="1"/>
+      <line x1="10" y1="12" x2="14" y2="16"/><line x1="14" y1="12" x2="10" y2="16"/>
+    </svg>
+  ),
+  sentencias: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v18"/><path d="M5.5 8l6.5-5 6.5 5"/>
+      <path d="M3 11l2.5 6h-5L3 11z"/><path d="M21 11l-2.5 6h5L21 11z"/>
+      <line x1="3" y1="20" x2="21" y2="20"/>
+    </svg>
+  ),
+  requerims: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+    </svg>
+  ),
+  cumplims: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+  ),
+  incidentes: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  ),
+  amparos: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  ),
+  conciliacion: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  oic: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  ),
+  reencauz: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
+    </svg>
+  ),
+}
+
 /* ─── NAV CONFIG ────────────────────────────────────────────────────────── */
 const NAV = [
-  { key:'dashboard',   label:'Dashboard',         icon:'⊞' },
-  { key:'actores',     label:'Actores',           icon:'👤' },
-  { key:'emplaz',      label:'Emplazamientos',    icon:'📋' },
-  { key:'noemplaz',    label:'No Emplazamientos', icon:'⛔' },
-  { key:'sentencias',  label:'Sentencias',        icon:'⚖️'  },
-  { key:'requerims',   label:'Requerimientos',    icon:'📌' },
-  { key:'cumplims',    label:'Cumplimientos',     icon:'✅' },
-  { key:'incidentes',  label:'Incidentes',        icon:'⚡' },
-  { key:'amparos',     label:'Amparos',           icon:'🛡'  },
-  { key:'conciliacion',label:'Conciliación',      icon:'🤝' },
-  { key:'oic',         label:'OIC',               icon:'🔍' },
-  { key:'reencauz',    label:'Reencauzamiento',   icon:'↩️'  },
+  { key:'dashboard',   label:'Dashboard'         },
+  { key:'actores',     label:'Actores'           },
+  { key:'emplaz',      label:'Emplazamientos'    },
+  { key:'noemplaz',    label:'No Emplazamientos' },
+  { key:'sentencias',  label:'Sentencias'        },
+  { key:'requerims',   label:'Requerimientos'    },
+  { key:'cumplims',    label:'Cumplimientos'     },
+  { key:'incidentes',  label:'Incidentes'        },
+  { key:'amparos',     label:'Amparos'           },
+  { key:'conciliacion',label:'Conciliación'      },
+  { key:'oic',         label:'OIC'               },
+  { key:'reencauz',    label:'Reencauzamiento'   },
 ]
 
 /* ─── MAIN VIEW ─────────────────────────────────────────────────────────── */
@@ -609,59 +687,50 @@ export default function DALView({ user }) {
   }
 
   return (
-    <div style={{ display:'flex',gap:0,overflow:'hidden',
+    <div style={{ display:'flex',flexDirection:'column',overflow:'hidden',
       height:'calc(100vh - 120px)',borderRadius:10,border:'1px solid #E2D9EE',
       boxShadow:'0 2px 8px rgba(88,46,115,.07)' }}>
-      {/* Internal sidebar */}
-      <nav style={{ width:200,flexShrink:0,background:'#3D1F52',
-        borderRight:'1px solid rgba(255,255,255,.06)',
-        display:'flex',flexDirection:'column',paddingBottom:0 }}>
-        <div style={{ flex:1,overflowY:'auto',paddingTop:12,paddingBottom:4 }}>
-          <p style={{ fontSize:10,fontWeight:800,color:'rgba(255,255,255,.3)',
-            letterSpacing:'0.1em',textTransform:'uppercase',padding:'0 14px 6px' }}>
-            DAL · Control Laboral
-          </p>
-          {NAV.map((n, i) => {
-            const isActive = active === n.key
-            const isSectionStart = i === 1
-            return (
-              <React.Fragment key={n.key}>
-                {isSectionStart && (
-                  <p style={{ fontSize:10,fontWeight:800,color:'rgba(255,255,255,.3)',
-                    letterSpacing:'0.1em',textTransform:'uppercase',padding:'14px 14px 4px',marginTop:2 }}>
-                    Secciones
-                  </p>
-                )}
-                <button onClick={() => setActive(n.key)}
-                  style={{ display:'flex',alignItems:'center',gap:10,padding:'8px 14px',
-                    margin:'1px 8px',borderRadius:7,cursor:'pointer',fontSize:13,fontWeight: isActive ? 700 : 500,
-                    color: isActive ? '#fff' : '#C4A8DC',background: isActive ? 'rgba(255,255,255,.15)' : 'transparent',
-                    border:'none',textAlign:'left',transition:'all .15s',whiteSpace:'nowrap',width:'calc(100% - 16px)' }}
-                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background='rgba(255,255,255,.08)'; e.currentTarget.style.color='#fff' } }}
-                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='#C4A8DC' } }}>
-                  <span style={{ fontSize:14 }}>{n.icon}</span>
-                  <span>{n.label}</span>
-                </button>
-              </React.Fragment>
-            )
-          })}
-        </div>
 
-        <div style={{ padding:'10px 10px 12px',borderTop:'1px solid rgba(255,255,255,.08)',flexShrink:0 }}>
+      {/* Top tab bar — same style as diligencias */}
+      <nav style={{ background:'#fff',flexShrink:0,display:'flex',alignItems:'center',
+        gap:2,padding:'0 12px',borderBottom:'1px solid #E2D9EE',overflowX:'auto',
+        scrollbarWidth:'none' }}>
+
+        {NAV.map(n => {
+          const isActive = active === n.key
+          return (
+            <button key={n.key} onClick={() => setActive(n.key)} title={n.label}
+              style={{ display:'flex',alignItems:'center',justifyContent:'center',
+                padding:'7px 10px',borderRadius:6,border:'none',cursor:'pointer',
+                flexShrink:0,
+                color: isActive ? '#fff' : '#6B5F78',
+                background: isActive ? '#582E73' : 'transparent',
+                transition:'all .15s' }}>
+              <span style={{ display:'flex',alignItems:'center',width:18,height:18,color:'inherit' }}>
+                {ICONS[n.key]}
+              </span>
+            </button>
+          )
+        })}
+
+        {/* Separator + seed actions */}
+        <div style={{ marginLeft:'auto',display:'flex',alignItems:'center',gap:4,
+          paddingLeft:12,borderLeft:'1px solid #E2D9EE',flexShrink:0 }}>
           <button
             onClick={() => handleSeed(false)}
-            style={{ width:'100%',padding:'7px 10px',borderRadius:7,border:'1px solid rgba(255,255,255,.18)',
-              background:'rgba(255,255,255,.07)',color:'#C4A8DC',fontSize:11,cursor:'pointer',
-              fontWeight:600,letterSpacing:'0.03em',textAlign:'center' }}
-            title="Carga los datos iniciales de los PDF (solo si la tabla está vacía)">
-            {seeded ? '✓ Datos cargados' : '⬇ Inicializar datos'}
+            title="Carga los datos iniciales (solo si la tabla está vacía)"
+            style={{ display:'flex',alignItems:'center',gap:6,padding:'6px 10px',borderRadius:6,
+              border:'1px solid #E2D9EE',background:'#F8F5FB',
+              color: seeded ? '#059669' : '#6B5F78',
+              fontSize:12,cursor:'pointer',fontWeight:600,whiteSpace:'nowrap' }}>
+            {seeded ? '✓ Cargado' : '⬇ Inicializar'}
           </button>
           <button
-            onClick={() => { if (window.confirm('¿Sobreescribir todos los datos existentes con los datos iniciales?')) handleSeed(true) }}
-            style={{ width:'100%',marginTop:4,padding:'5px 10px',borderRadius:7,border:'none',
-              background:'transparent',color:'rgba(255,255,255,.25)',fontSize:10,cursor:'pointer' }}
-            title="Fuerza la recarga aunque ya haya datos">
-            Recargar (sobreescribir)
+            onClick={() => { if (window.confirm('¿Sobreescribir todos los datos existentes?')) handleSeed(true) }}
+            title="Fuerza la recarga aunque ya haya datos"
+            style={{ padding:'6px 8px',borderRadius:6,border:'none',
+              background:'transparent',color:'#A090B0',fontSize:13,cursor:'pointer' }}>
+            ↺
           </button>
         </div>
       </nav>

@@ -5,7 +5,8 @@
   "scripts": {
     "dev:server": "node server.js",
     "dev:client": "vite",
-    "dev": "concurrently \"node server.js\" \"vite\""
+    "dev": "concurrently \"node server.js\" \"vite\"",
+    "build": "vite build"
   },
   "dependencies": {
     "axios": "^1.16.0",

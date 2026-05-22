@@ -107,9 +107,33 @@ function requireAdmin(req, res, next) {
   next()
 }
 
+// SSO endpoint — POST, returns JSON token for React frontend
+const PORTAL_SSO_SECRET = process.env.PORTAL_SSO_SECRET || 'ine_portal_sso_tareas_2026'
+app.post('/api/auth/sso', (req, res) => {
+  const { sso_token } = req.body
+  if (!sso_token) return res.status(400).json({ error: 'Token SSO requerido' })
+  try {
+    const payload = jwt.verify(sso_token, PORTAL_SSO_SECRET)
+    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(payload.email)
+    if (!user) {
+      db.prepare('INSERT OR IGNORE INTO users (email, name, password_hash, role, direccion) VALUES (?,?,?,?,?)')
+        .run(payload.email, payload.name, 'sso_user', payload.role || 'director', payload.direccion || '')
+      user = db.prepare('SELECT * FROM users WHERE email = ?').get(payload.email)
+    }
+    const token = jwt.sign(
+      { id: user.id, email: user.email, name: user.name, role: user.role, direccion: user.direccion },
+      JWT_SECRET, { expiresIn: JWT_EXPIRES }
+    )
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, direccion: user.direccion } })
+  } catch {
+    res.status(401).json({ error: 'Token SSO inválido o expirado' })
+  }
+})
+
 // Auth middleware — runs before all /api routes except login
 app.use('/api', (req, res, next) => {
   if (req.path === '/auth/login' && req.method === 'POST') return next()
+  if (req.path === '/auth/sso'   && req.method === 'POST') return next()
   const auth = req.headers.authorization
   if (!auth?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No autorizado' })
