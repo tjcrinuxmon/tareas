@@ -1027,6 +1027,7 @@ app.delete('/api/dal/:section/:id', (req, res) => {
   res.json({ ok: true })
 })
 
+app.use('/tareas', express.static(join(__dirname, 'dist')))
 app.use(express.static(join(__dirname, 'dist')))
 app.get('*', (req, res) => res.sendFile(join(__dirname, 'dist', 'index.html')))
 
