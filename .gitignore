@@ -13,6 +13,13 @@ node_modules/
 # Uploads
 uploads/
 
+# SQLite WAL temp files (data stays in .db)
+*.db-shm
+*.db-wal
+
+# Vite build cache
+dist/
+
 # OS files
 .DS_Store
 Thumbs.db

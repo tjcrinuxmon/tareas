@@ -22,13 +22,15 @@ export default function Sidebar({ open, onClose, filters, onFilterChange, onNavi
   const isUsers       = currentView === 'users'
 
   const restricted  = user?.role === 'director' || user?.role === 'subdirector'
-  const isEnlace       = currentView === 'enlace'
+  const isEnlace          = currentView === 'enlace'
   const isConvenios       = currentView === 'convenios'
   const isConveniosReport = currentView === 'convenios-report'
   const isDal             = currentView === 'dal'
+  const isDalDash         = currentView === 'dal-dashboard'
   const canSeeEnlace    = user?.role === 'admin' || user?.role === 'ejecutiva' || user?.direccion === 'enlace_interinstitucional'
   const canSeeConvenios = user?.role === 'admin' || user?.role === 'ejecutiva' || user?.role === 'secretaria' || user?.direccion === 'contratos_convenios'
   const canSeeDal       = user?.role === 'admin' || user?.role === 'ejecutiva' || user?.direccion === 'asuntos_laborales'
+  const canSeeDalDash   = user?.role === 'admin' || user?.role === 'ejecutiva'
 
   return (
     <aside
@@ -123,6 +125,20 @@ export default function Sidebar({ open, onClose, filters, onFilterChange, onNavi
               </svg>
             }
             label="Convenios"
+          />
+        )}
+
+        {canSeeDalDash && (
+          <NavItem
+            active={isDalDash}
+            onClick={() => { onNavigate('dal-dashboard'); closeIfMobile() }}
+            icon={
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                  d="M11 3H3v8h8V3zm10 0h-8v5h8V3zm0 9h-8v9h8v-9zm-10 4H3v5h8v-5z" />
+              </svg>
+            }
+            label="Dashboard Laborales"
           />
         )}
 

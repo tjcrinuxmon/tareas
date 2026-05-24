@@ -26,11 +26,16 @@ const ROLE_LABELS = {
 export default function App() {
   const [token, setToken] = useState(() => getToken())
   const [user, setUser] = useState(() => getUser())
+  // True while an SSO token in the URL is being exchanged — prevents LoginPage
+  // from redirecting to portal before the exchange completes.
+  const [ssoLoading, setSsoLoading] = useState(
+    () => !!new URLSearchParams(window.location.search).get('sso_token')
+  )
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const ssoToken = params.get('sso_token')
-    if (!ssoToken || token) return
+    if (!ssoToken) return
     fetch('/api/auth/sso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -38,13 +43,26 @@ export default function App() {
     })
       .then(r => r.json())
       .then(({ token: t, user: u }) => {
-        if (!t) return
-        setAuth(t, u)
-        setToken(t)
-        setUser(u)
-        window.history.replaceState({}, '', '/')
+        if (t) {
+          setAuth(t, u)
+          setToken(t)
+          setUser(u)
+          setView('tasks')
+          setSelectedTaskId(null)
+          setEditingTask(null)
+          setFilters({
+            direccion: (u?.role === 'director' || u?.role === 'subdirector') ? (u?.direccion || '') : '',
+            status: '',
+            date_from: '',
+            date_to: '',
+            priority: '',
+          })
+          setRefreshKey(k => k + 1)
+          window.history.replaceState({}, '', '/')
+        }
+        setSsoLoading(false)
       })
-      .catch(() => {})
+      .catch(() => setSsoLoading(false))
   }, [])
 
   const [view, setView] = useState('tasks')
@@ -99,6 +117,15 @@ export default function App() {
     setUser(null)
     setView('tasks')
   }
+
+  if (ssoLoading) return (
+    <div className="flex items-center justify-center h-screen bg-ine-bg">
+      <div className="text-center">
+        <div className="w-10 h-10 border-4 border-ine-border border-t-ine-purple rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-sm text-ine-dim">Iniciando sesión…</p>
+      </div>
+    </div>
+  )
 
   if (!token || !user) return <LoginPage onLogin={handleLogin} />
 
@@ -167,6 +194,7 @@ export default function App() {
                 'convenios':        'Seguimiento de Convenios',
                 'convenios-report': 'Reportes de Convenios',
                 'dal':              'Asuntos Laborales',
+                'dal-dashboard':    'Dashboard Laborales',
               }[view] || ''}</span>
             </div>
           )}
@@ -209,7 +237,7 @@ export default function App() {
                 {ROLE_LABELS[user.role] || 'Usuario'}
               </p>
             </div>
-            <a href="http://localhost:5174" title="Volver al portal"
+            <a href="http://localhost:3000" title="Volver al portal"
               className="p-1.5 rounded-lg text-ine-dim hover:text-ine-purple hover:bg-ine-bg transition-colors flex items-center gap-1 text-xs font-semibold"
               style={{ textDecoration:'none' }}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,6 +304,7 @@ export default function App() {
           {view === 'convenios' && (user?.role === 'admin' || user?.role === 'ejecutiva' || user?.role === 'secretaria' || user?.direccion === 'contratos_convenios') && <ConveniosView user={user} />}
           {view === 'convenios-report' && user?.role === 'admin' && <ConveniosReport />}
           {view === 'dal' && (user?.role === 'admin' || user?.role === 'ejecutiva' || user?.direccion === 'asuntos_laborales') && <DALView user={user} />}
+          {view === 'dal-dashboard' && (user?.role === 'admin' || user?.role === 'ejecutiva') && <DALView user={user} dashboardOnly />}
         </main>
 
         {/* Footer */}

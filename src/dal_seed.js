@@ -106,28 +106,20 @@ const AMPAROS = [
   { id:sid(611), expediente:'SCM-JLI-2/2026',                 fechaNotificacion:'2026-03-23', actor:'', plazo:'',   fechaVencimiento:'', abogado:'Luis Carlos',tribunal:'Sala Regional CDMX',        fechaCumplimiento:'' },
 ]
 
-export function applyDalSeed(setters, force = false) {
-  const {
-    setActores, setEmplaz, setNoemplaz, setSentencias, setRequerims,
-    setCumplims, setIncidentes, setAmparos, setConciliacion, setOic, setReencauz,
-  } = setters
+import { seedDalSection } from './api.js'
 
-  const apply = (key, data, setter) => {
-    if (!setter) return
-    const existing = (() => { try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : [] } catch { return [] } })()
-    if (!force && existing.length > 0) return
-    setter(data)
+export async function applyDalSeed(force = false) {
+  const MAP = {
+    actores: ACTORES, emplaz: EMPLAZ, noemplaz: NOEMPLAZ,
+    sentencias: SENTENCIAS, requerims: REQUERIMS, cumplims: CUMPLIMS,
+    incidentes: INCIDENTES, amparos: AMPAROS, conciliacion: CONCILIACION,
+    oic: OIC, reencauz: REENCAUZ,
   }
-
-  apply('dal_actores',      ACTORES,      setActores)
-  apply('dal_emplaz',       EMPLAZ,       setEmplaz)
-  apply('dal_noemplaz',     NOEMPLAZ,     setNoemplaz)
-  apply('dal_sentencias',   SENTENCIAS,   setSentencias)
-  apply('dal_requerims',    REQUERIMS,    setRequerims)
-  apply('dal_cumplims',     CUMPLIMS,     setCumplims)
-  apply('dal_incidentes',   INCIDENTES,   setIncidentes)
-  apply('dal_amparos',      AMPAROS,      setAmparos)
-  apply('dal_conciliacion', CONCILIACION, setConciliacion)
-  apply('dal_oic',          OIC,          setOic)
-  apply('dal_reencauz',     REENCAUZ,     setReencauz)
+  const results = await Promise.all(
+    Object.entries(MAP).map(async ([section, data]) => {
+      const res = await seedDalSection(section, data, force)
+      return [section, res.skipped ? null : res]
+    })
+  )
+  return Object.fromEntries(results)
 }

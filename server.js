@@ -83,43 +83,27 @@ const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } })
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 
-app.post('/api/auth/login', (req, res) => {
-  try {
-    const { email, password } = req.body
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Correo y contraseña requeridos' })
-    }
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase())
-    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-      return res.status(401).json({ error: 'Credenciales incorrectas' })
-    }
-    const payload = { id: user.id, email: user.email, name: user.name, role: user.role, direccion: user.direccion }
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES })
-    res.json({ token, user: payload })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Error en el servidor' })
-  }
-})
-
 function requireAdmin(req, res, next) {
   if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Acceso restringido a administradores' })
   next()
 }
 
-// SSO endpoint — POST, returns JSON token for React frontend
+// SSO endpoint — portal is the single source of truth; always sync user data
 const PORTAL_SSO_SECRET = process.env.PORTAL_SSO_SECRET || 'ine_portal_sso_tareas_2026'
 app.post('/api/auth/sso', (req, res) => {
   const { sso_token } = req.body
   if (!sso_token) return res.status(400).json({ error: 'Token SSO requerido' })
   try {
     const payload = jwt.verify(sso_token, PORTAL_SSO_SECRET)
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(payload.email)
-    if (!user) {
-      db.prepare('INSERT OR IGNORE INTO users (email, name, password_hash, role, direccion) VALUES (?,?,?,?,?)')
-        .run(payload.email, payload.name, 'sso_user', payload.role || 'director', payload.direccion || '')
-      user = db.prepare('SELECT * FROM users WHERE email = ?').get(payload.email)
+    const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(payload.email)
+    if (!existing) {
+      db.prepare('INSERT INTO users (email, name, password_hash, role, direccion, puesto) VALUES (?,?,?,?,?,?)')
+        .run(payload.email, payload.name, 'sso_user', payload.role || 'director', payload.direccion || '', payload.puesto || '')
+    } else {
+      db.prepare('UPDATE users SET name=?, role=?, direccion=?, puesto=? WHERE email=?')
+        .run(payload.name, payload.role || existing.role, payload.direccion ?? '', payload.puesto ?? existing.puesto ?? '', payload.email)
     }
+    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(payload.email)
     const token = jwt.sign(
       { id: user.id, email: user.email, name: user.name, role: user.role, direccion: user.direccion },
       JWT_SECRET, { expiresIn: JWT_EXPIRES }
@@ -130,10 +114,9 @@ app.post('/api/auth/sso', (req, res) => {
   }
 })
 
-// Auth middleware — runs before all /api routes except login
+// Auth middleware — all /api routes except SSO
 app.use('/api', (req, res, next) => {
-  if (req.path === '/auth/login' && req.method === 'POST') return next()
-  if (req.path === '/auth/sso'   && req.method === 'POST') return next()
+  if (req.path === '/auth/sso' && req.method === 'POST') return next()
   const auth = req.headers.authorization
   if (!auth?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No autorizado' })
@@ -984,6 +967,63 @@ app.put('/api/convenios/:id', (req, res) => {
 app.delete('/api/convenios/:id', (req, res) => {
   if (!canAccessConvenios(req.user)) return res.status(403).json({ error: 'Sin acceso' })
   db.prepare('DELETE FROM convenios WHERE id = ?').run(req.params.id)
+  res.json({ ok: true })
+})
+
+/* ── DAL — Asuntos Laborales ─────────────────────────────────────────────── */
+const DAL_SECTIONS = new Set(['actores','emplaz','noemplaz','sentencias','requerims','cumplims','incidentes','amparos','conciliacion','oic','reencauz'])
+const canAccessDal = (user) => user.role === 'admin' || user.role === 'ejecutiva' || user.direccion === 'asuntos_laborales'
+
+app.get('/api/dal/:section', (req, res) => {
+  if (!canAccessDal(req.user)) return res.status(403).json({ error: 'Sin acceso' })
+  if (!DAL_SECTIONS.has(req.params.section)) return res.status(400).json({ error: 'Sección inválida' })
+  const rows = db.prepare('SELECT id, data FROM dal_records WHERE section = ? ORDER BY id ASC').all(req.params.section)
+  res.json(rows.map(r => ({ id: r.id, ...JSON.parse(r.data) })))
+})
+
+app.post('/api/dal/:section', (req, res) => {
+  if (!canAccessDal(req.user)) return res.status(403).json({ error: 'Sin acceso' })
+  if (!DAL_SECTIONS.has(req.params.section)) return res.status(400).json({ error: 'Sección inválida' })
+  const { id: _id, ...data } = req.body
+  const result = db.prepare('INSERT INTO dal_records (section, data) VALUES (?, ?)').run(req.params.section, JSON.stringify(data))
+  const row = db.prepare('SELECT id, data FROM dal_records WHERE id = ?').get(result.lastInsertRowid)
+  res.status(201).json({ id: row.id, ...JSON.parse(row.data) })
+})
+
+app.post('/api/dal/:section/batch', (req, res) => {
+  if (!canAccessDal(req.user)) return res.status(403).json({ error: 'Sin acceso' })
+  if (!DAL_SECTIONS.has(req.params.section)) return res.status(400).json({ error: 'Sección inválida' })
+  const records = Array.isArray(req.body) ? req.body : []
+  const force = req.query.force === '1'
+  const existing = db.prepare('SELECT COUNT(*) as cnt FROM dal_records WHERE section = ?').get(req.params.section)
+  if (!force && existing.cnt > 0) return res.json({ skipped: true, count: existing.cnt })
+  if (force) db.prepare('DELETE FROM dal_records WHERE section = ?').run(req.params.section)
+  const insert = db.prepare('INSERT INTO dal_records (section, data) VALUES (?, ?)')
+  db.transaction(() => {
+    for (const r of records) {
+      const { id: _id, ...data } = r
+      insert.run(req.params.section, JSON.stringify(data))
+    }
+  })()
+  const rows = db.prepare('SELECT id, data FROM dal_records WHERE section = ? ORDER BY id ASC').all(req.params.section)
+  res.json(rows.map(r => ({ id: r.id, ...JSON.parse(r.data) })))
+})
+
+app.put('/api/dal/:section/:id', (req, res) => {
+  if (!canAccessDal(req.user)) return res.status(403).json({ error: 'Sin acceso' })
+  if (!DAL_SECTIONS.has(req.params.section)) return res.status(400).json({ error: 'Sección inválida' })
+  const row = db.prepare('SELECT id FROM dal_records WHERE id = ? AND section = ?').get(req.params.id, req.params.section)
+  if (!row) return res.status(404).json({ error: 'Registro no encontrado' })
+  const { id: _id, ...data } = req.body
+  db.prepare('UPDATE dal_records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(data), req.params.id)
+  const updated = db.prepare('SELECT id, data FROM dal_records WHERE id = ?').get(req.params.id)
+  res.json({ id: updated.id, ...JSON.parse(updated.data) })
+})
+
+app.delete('/api/dal/:section/:id', (req, res) => {
+  if (!canAccessDal(req.user)) return res.status(403).json({ error: 'Sin acceso' })
+  if (!DAL_SECTIONS.has(req.params.section)) return res.status(400).json({ error: 'Sección inválida' })
+  db.prepare('DELETE FROM dal_records WHERE id = ? AND section = ?').run(req.params.id, req.params.section)
   res.json({ ok: true })
 })
 
