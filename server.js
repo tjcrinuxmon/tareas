@@ -1,6 +1,8 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
+import rateLimit from 'express-rate-limit'
 import multer from 'multer'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
@@ -23,7 +25,8 @@ function localDateStr(d) {
 
 const app = express()
 const PORT = 3001
-const JWT_SECRET = 'ine_tareas_jwt_secret_2024'
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) { console.error('FATAL: JWT_SECRET no definido'); process.exit(1) }
 const JWT_EXPIRES = '8h'
 
 const uploadsDir = join(__dirname, 'uploads')
@@ -67,7 +70,12 @@ function sendAssignmentEmail(toEmail, toName, assigner, taskTitle) {
     .catch((err) => console.error('[email] Error al enviar:', err.message))
 }
 
-app.use(cors())
+app.use(helmet({ contentSecurityPolicy: false }))
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+}))
 app.use(express.json())
 app.use('/uploads', express.static(uploadsDir))
 
@@ -89,8 +97,10 @@ function requireAdmin(req, res, next) {
 }
 
 // SSO endpoint — portal is the single source of truth; always sync user data
-const PORTAL_SSO_SECRET = process.env.PORTAL_SSO_SECRET || 'ine_portal_sso_tareas_2026'
-app.post('/api/auth/sso', (req, res) => {
+const PORTAL_SSO_SECRET = process.env.PORTAL_SSO_SECRET
+if (!PORTAL_SSO_SECRET) { console.error('FATAL: PORTAL_SSO_SECRET no definido'); process.exit(1) }
+const ssoLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Demasiados intentos. Espera 15 minutos.' } })
+app.post('/api/auth/sso', ssoLimiter, (req, res) => {
   const { sso_token } = req.body
   if (!sso_token) return res.status(400).json({ error: 'Token SSO requerido' })
   try {
