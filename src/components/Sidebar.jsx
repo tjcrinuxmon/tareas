@@ -20,17 +20,21 @@ export default function Sidebar({ open, onClose, filters, onFilterChange, onNavi
   const isReport      = currentView === 'report'
   const isCalendar    = currentView === 'calendar'
   const isUsers       = currentView === 'users'
-
-  const restricted  = user?.role === 'director' || user?.role === 'subdirector'
   const isEnlace          = currentView === 'enlace'
   const isConvenios       = currentView === 'convenios'
   const isConveniosReport = currentView === 'convenios-report'
   const isDal             = currentView === 'dal'
   const isDalDash         = currentView === 'dal-dashboard'
+
+  const restricted      = user?.role === 'director' || user?.role === 'subdirector'
   const canSeeEnlace    = user?.role === 'admin' || user?.role === 'ejecutiva' || user?.direccion === 'enlace_interinstitucional'
   const canSeeConvenios = user?.role === 'admin' || user?.role === 'ejecutiva' || user?.role === 'secretaria' || user?.direccion === 'contratos_convenios'
   const canSeeDal       = user?.role === 'admin' || user?.role === 'ejecutiva' || user?.direccion === 'asuntos_laborales'
   const canSeeDalDash   = user?.role === 'admin' || user?.role === 'ejecutiva'
+  const isAdmin         = user?.role === 'admin'
+
+  const hasReportes          = canSeeEnlace || true || isAdmin
+  const hasActividadesSemanales = canSeeConvenios || canSeeDal || canSeeDalDash
 
   return (
     <aside
@@ -60,7 +64,9 @@ export default function Sidebar({ open, onClose, filters, onFilterChange, onNavi
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-        <p className="px-3 pt-2 pb-1 text-xs font-bold text-ine-dim uppercase tracking-wider">Principal</p>
+
+        {/* ── Principal ───────────────────────────────────────────── */}
+        <SectionLabel>Principal</SectionLabel>
 
         {!restricted && (
           <NavItem
@@ -77,18 +83,6 @@ export default function Sidebar({ open, onClose, filters, onFilterChange, onNavi
         )}
 
         <NavItem
-          active={isReport}
-          onClick={() => { onNavigate('report'); closeIfMobile() }}
-          icon={
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          }
-          label="Reportes"
-        />
-
-        <NavItem
           active={isCalendar}
           onClick={() => { onNavigate('calendar'); closeIfMobile() }}
           icon={
@@ -99,6 +93,9 @@ export default function Sidebar({ open, onClose, filters, onFilterChange, onNavi
           }
           label="Calendario"
         />
+
+        {/* ── Reportes ────────────────────────────────────────────── */}
+        {hasReportes && <SectionLabel>Reportes</SectionLabel>}
 
         {canSeeEnlace && (
           <NavItem
@@ -114,6 +111,35 @@ export default function Sidebar({ open, onClose, filters, onFilterChange, onNavi
           />
         )}
 
+        <NavItem
+          active={isReport}
+          onClick={() => { onNavigate('report'); closeIfMobile() }}
+          icon={
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          }
+          label="Reporte de Tareas"
+        />
+
+        {isAdmin && (
+          <NavItem
+            active={isConveniosReport}
+            onClick={() => { onNavigate('convenios-report'); closeIfMobile() }}
+            icon={
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            }
+            label="Reporte de Convenios"
+          />
+        )}
+
+        {/* ── Actividades Semanales ────────────────────────────────── */}
+        {hasActividadesSemanales && <SectionLabel>Actividades Semanales</SectionLabel>}
+
         {canSeeConvenios && (
           <NavItem
             active={isConvenios}
@@ -125,20 +151,6 @@ export default function Sidebar({ open, onClose, filters, onFilterChange, onNavi
               </svg>
             }
             label="Convenios"
-          />
-        )}
-
-        {canSeeDalDash && (
-          <NavItem
-            active={isDalDash}
-            onClick={() => { onNavigate('dal-dashboard'); closeIfMobile() }}
-            icon={
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                  d="M11 3H3v8h8V3zm10 0h-8v5h8V3zm0 9h-8v9h8v-9zm-10 4H3v5h8v-5z" />
-              </svg>
-            }
-            label="Dashboard Laborales"
           />
         )}
 
@@ -156,37 +168,40 @@ export default function Sidebar({ open, onClose, filters, onFilterChange, onNavi
           />
         )}
 
-        {/* Admin only: convenios report */}
-        {user?.role === 'admin' && (
+        {canSeeDalDash && (
           <NavItem
-            active={isConveniosReport}
-            onClick={() => { onNavigate('convenios-report'); closeIfMobile() }}
+            active={isDalDash}
+            onClick={() => { onNavigate('dal-dashboard'); closeIfMobile() }}
             icon={
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  d="M11 3H3v8h8V3zm10 0h-8v5h8V3zm0 9h-8v9h8v-9zm-10 4H3v5h8v-5z" />
               </svg>
             }
-            label="Reportes Convenios"
+            label="Dashboard Laborales"
           />
         )}
 
-        {/* Admin only: user management */}
-        {user?.role === 'admin' && (
-          <NavItem
-            active={isUsers}
-            onClick={() => { onNavigate('users'); closeIfMobile() }}
-            icon={
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            }
-            label="Gestión de Usuarios"
-          />
+        {/* ── Administración ───────────────────────────────────────── */}
+        {isAdmin && (
+          <>
+            <SectionLabel>Administración</SectionLabel>
+            <NavItem
+              active={isUsers}
+              onClick={() => { onNavigate('users'); closeIfMobile() }}
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              }
+              label="Gestión de Usuarios"
+            />
+          </>
         )}
 
-        <p className="px-3 pt-4 pb-1 text-xs font-bold text-ine-dim uppercase tracking-wider">Direcciones</p>
+        {/* ── Direcciones ──────────────────────────────────────────── */}
+        <SectionLabel top>Direcciones</SectionLabel>
 
         {DIRECCIONES.map((dir) => {
           const active = isActive(dir.key)
@@ -243,6 +258,14 @@ export default function Sidebar({ open, onClose, filters, onFilterChange, onNavi
         </div>
       </div>
     </aside>
+  )
+}
+
+function SectionLabel({ children, top = false }) {
+  return (
+    <p className={`px-3 ${top ? 'pt-4' : 'pt-3'} pb-1 text-xs font-bold text-ine-dim uppercase tracking-wider`}>
+      {children}
+    </p>
   )
 }
 
